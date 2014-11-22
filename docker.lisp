@@ -3,6 +3,27 @@
 
 (in-package :docker)
 
+(defun uncamel-case (string)
+  "Convert a camelCase string into a dashed string."
+  (declare (string string))
+  (with-output-to-string (out)
+    (with-input-from-string (in string)
+      (loop
+         for ch = (read-char in nil)
+         while ch
+         do (progn
+              (write-char (char-upcase ch) out)
+              (let ((next (peek-char nil in nil)))
+                (when (and (characterp next) (upper-case-p next))
+                  (write-char #\- out))))))))
+
+
+(defun string-to-keyword (string)
+  "Make a Lisp keyword from a camelCased string."
+  (declare (string string))
+  (intern (uncamel-case string) "KEYWORD"))
+
+
 
 (define-condition docker-condition ()
   nil)
@@ -134,3 +155,14 @@ headers and values as strings."
 
           (values (flex:make-flexi-stream stream :external-format :utf-8)
                   headers))))))
+
+
+
+(defun request-json (url &rest args &key &allow-other-keys)
+  (multiple-value-bind (stream headers)
+      (apply #'request url args)
+    (declare (ignorable headers))
+    (with-open-stream (stream stream)
+      (yason:parse stream
+                   :object-key-fn #'string-to-keyword
+                   :object-as :plist))))
