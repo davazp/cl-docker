@@ -6,4 +6,6 @@
   :license "MIT"
   :depends-on (:flexi-streams :chunga :yason)
   :components
-  ((:file "docker")))
+  ((:file "request")
+   (:file "images" :depends-on ("request"))
+   (:file "docker" :depends-on ("images"))))
