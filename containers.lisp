@@ -1,7 +1,10 @@
 (defpackage :docker/containers
   (:use :common-lisp :docker/request)
   (:export #:list-containers
-           #:inspect-container))
+           #:inspect-container
+           #:list-container-processes
+           #:inspect-container-changes
+           #:remove-container))
 
 (in-package :docker/containers)
 

@@ -1,5 +1,8 @@
 (defpackage :docker/request
   (:use :common-lisp)
+  (:import-from :chunga)
+  (:import-from :flexi-streams)
+  (:import-from :yason)
   (:export #:request
            #:request-json))
 

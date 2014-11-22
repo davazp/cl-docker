@@ -1,6 +1,8 @@
 (defpackage :docker/images
   (:use :common-lisp :docker/request)
-  (:export #:list-images))
+  (:export #:list-images
+           #:inspect-image
+           #:image-history))
 
 (in-package :docker/images)
 
