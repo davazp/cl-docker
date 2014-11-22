@@ -8,4 +8,5 @@
   :components
   ((:file "request")
    (:file "images" :depends-on ("request"))
+   (:file "containers" :depends-on ("request"))
    (:file "docker" :depends-on ("images"))))

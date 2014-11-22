@@ -150,13 +150,14 @@ headers and values as strings."
 
         (let* ((headers (chunga:read-http-headers stream (and *debug-protocol* *standard-output*)))
                (transfer-coding (transfer-coding headers))
-               (stream (chunga:make-chunked-stream stream)))
+               (content-stream
+                (when (/= status-code 204)
+                  (let ((chunked (chunga:make-chunked-stream stream)))
+                    (when (equalp transfer-coding "chunked")
+                      (setf (chunga:chunked-stream-input-chunking-p chunked) t))
+                    (flex:make-flexi-stream chunked :external-format :utf-8)))))
 
-          (when (equalp transfer-coding "chunked")
-            (setf (chunga:chunked-stream-input-chunking-p stream) t))
-
-          (values (flex:make-flexi-stream stream :external-format :utf-8)
-                  headers))))))
+          (values content-stream headers))))))
 
 
 
@@ -164,7 +165,8 @@ headers and values as strings."
   (multiple-value-bind (stream headers)
       (apply #'request url args)
     (declare (ignorable headers))
-    (with-open-stream (stream stream)
-      (yason:parse stream
-                   :object-key-fn #'string-to-keyword
-                   :object-as :plist))))
+    (when stream
+      (with-open-stream (stream stream)
+        (yason:parse stream
+                     :object-key-fn #'string-to-keyword
+                     :object-as :plist)))))

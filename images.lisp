@@ -7,3 +7,8 @@
 (defun list-images (&optional all)
   (request-json (format nil "/images/json~@[?all=1~]" all)))
 
+(defun inspect-images (name)
+  (request-json (format nil "/images/~a/json" name)))
+
+(defun image-history (name)
+  (request-json (format nil "/images/~a/history" name)))
