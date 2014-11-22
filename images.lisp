@@ -4,8 +4,8 @@
 
 (in-package :docker/images)
 
-(defun list-images (&optional all)
-  (request-json (format nil "/images/json~@[?all=1~]" all)))
+(defun list-images (&key all)
+  (request-json (format nil "/images/json~:[~;?all=1~]" all)))
 
 (defun inspect-images (name)
   (request-json (format nil "/images/~a/json" name)))
