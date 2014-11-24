@@ -4,7 +4,8 @@
   (:import-from :flexi-streams)
   (:import-from :yason)
   (:export #:request
-           #:request-json))
+           #:request-json
+           #:query-string))
 
 (in-package :docker/request)
 
@@ -89,15 +90,6 @@ flexi-stream, which can be used to write and read from the daemon."
              (docker-protocol-error-reason condition)))))
 
 
-(defun parse-status-line (line)
-  ;; HTTP-Version SP Status-Code SP Reason-Phrase CRLF
-  (let* ((sp1 (position #\space line))
-         (sp2 (position #\space line :start (1+ sp1))))
-    (list (subseq line 0 sp1)
-          (parse-integer (subseq line (1+ sp1) sp2))
-          (subseq line (1+ sp2)))))
-
-
 ;;; If it is non-NIL, the communication with the Docker daemon will be
 ;;; logged into the standard output.
 (defvar *debug-protocol* nil)
@@ -107,26 +99,44 @@ flexi-stream, which can be used to write and read from the daemon."
 (defun read-line* (stream &optional (eof-error-p t))
   (let ((line (string-right-trim *crlf* (read-line stream eof-error-p))))
     (when *debug-protocol*
-      (format t "< ~a~%" line))
+      (format t "~a~%" line))
     line))
 
 ;;; Like `format', but support logging for debugging purposes.
 (defun format* (stream fmt &rest args)
   (when *debug-protocol*
-    (format t "> ~?~%" fmt args))
+    (format t "~?~%" fmt args))
   (apply #'format stream fmt args))
 
 ;;; Write a CR and a LF character to STREAM.
 (defun write-crlf (stream)
   (write-string *crlf* stream))
 
+(defun format-line* (stream fmt &rest args)
+  (apply #'format* stream fmt args)
+  (write-crlf stream))
+
+
 (defun transfer-coding (headers)
   (let ((value (cdr (assoc :transfer-encoding headers))))
     (when value
       (subseq value 0 (or (position #\; value) (length value))))))
 
+;;; Check if STREAM is a input binary stream.
+(defun binary-input-stream-p (stream)
+  (and (input-stream-p stream)
+       (equal (stream-element-type stream) '(unsigned-byte 8))))
 
-(defun request (url &key (method :get))
+(defun parse-status-line (line)
+  ;; HTTP-Version SP Status-Code SP Reason-Phrase CRLF
+  (let* ((sp1 (position #\space line))
+         (sp2 (position #\space line :start (1+ sp1))))
+    (list (subseq line 0 sp1)
+          (parse-integer (subseq line (1+ sp1) sp2))
+          (subseq line (1+ sp2)))))
+
+
+(defun request (url &key (method :get) content content-type)
   "Request a resource an Docker Remote API end-point.
 
 It returns a stream as primary value and a associative list of HTTP
@@ -134,9 +144,38 @@ headers and values as strings."
   (let ((stream (open-docker-stream)))
     ;; Request resource
     (format* stream "~a ~a HTTP/1.1" method url)
+
+    (when content-type
+      (format-line* stream "Content-Type: ~a" content-type))
+
+    (etypecase content
+      (null)
+      (string
+       (format-line* stream "Content-Length: ~d" (length content)))
+      (stream
+       (unless (binary-input-stream-p content)
+         (error "~S must be a binary input stream." content))
+       (let ((content-length (and (typep content 'file-stream)
+                                  (file-length content))))
+         (if content-length
+             (format-line* stream "Content-Length: ~d" content-length)
+             (progn
+               (format-line* stream "Transfer-Encoding: chunked")
+               (setq content (chunga:make-chunked-stream content))
+               (setf (chunga:chunked-stream-input-chunking-p content) t))))))
+
     (write-crlf stream)
     (write-crlf stream)
     (finish-output stream)
+
+    ;; Send the request body
+    (etypecase content
+      (null)
+      (string
+       (write-string content stream))
+      (stream
+       (uiop/stream:copy-stream-to-stream content stream :element-type '(unsigned-byte 8))))
+    
 
     ;; Process response
     (let ((status-line (read-line* stream)))
@@ -173,3 +212,19 @@ headers and values as strings."
         (yason:parse stream
                      :object-key-fn #'string-to-keyword
                      :object-as :plist)))))
+
+
+(defun query-string (&rest plist)
+  (with-output-to-string (out)
+    (let ((plist (loop
+                    for (x y) on plist by #'cddr
+                    unless (null y)
+                    collect x
+                    collect y)))
+      (when plist
+        (destructuring-bind (attr value &rest others) plist
+          (declare (ignore others))
+          (format out "?~a=~a" attr value)))
+      (loop
+         for (attr value) on (cddr plist) by #'cddr
+         do (format out "&~a=~a" attr value)))))
