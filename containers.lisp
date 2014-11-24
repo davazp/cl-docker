@@ -9,8 +9,12 @@
 (in-package :docker/containers)
 
 (defun list-containers (&key limit since before size all)
-  (let ((url (format nil "/containers/json~@[?limit=~d~]~@[?since=~a~]~@[?before=~d~]~:[~;?size=1~]~:[~;?all=1~]"
-                     limit since before size all)))
+  (let ((url (format nil "/containers/json~a"
+                     (query-string "limit" limit
+                                   "since" since
+                                   "before" before
+                                   "size" (and size 1)
+                                   "all" (and all 1)))))
     (request-json url)))
 
 
