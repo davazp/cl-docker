@@ -220,7 +220,7 @@ headers and values as strings."
                     for (x y) on plist by #'cddr
                     unless (null y)
                     collect x
-                    collect y)))
+                    and collect y)))
       (when plist
         (destructuring-bind (attr value &rest others) plist
           (declare (ignore others))
