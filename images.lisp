@@ -6,7 +6,8 @@
            #:inspect-image
            #:image-history
            #:tag-image
-           #:remove-image))
+           #:remove-image
+           #:search-image))
 
 (in-package :docker/images)
 
