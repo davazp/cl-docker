@@ -8,6 +8,14 @@
 
 (in-package :docker/images)
 
+(defun list-images (&key all filters)
+  ;; filters example: {"dangling": ["true"]}
+  (request-json (format nil "/images/json~a"
+                        (query-string
+                         "all" (and all 1)
+                         "filters" (url-encode filters)))))
+
+
 (defun create-image (from-image &key (output *standard-output*) (error *error-output*))
   "Create an image from FROM-IMAGE."
   (multiple-value-bind (stream headers)
@@ -28,8 +36,6 @@
       (end-of-file ()))))
 
 
-(defun list-images (&key all)
-  (request-json (format nil "/images/json~:[~;?all=1~]" all)))
 
 (defun inspect-image (name)
   (request-json (format nil "/images/~a/json" name)))
