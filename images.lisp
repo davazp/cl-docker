@@ -4,7 +4,8 @@
   (:export #:create-image
            #:list-images
            #:inspect-image
-           #:image-history))
+           #:image-history
+           #:remove-image))
 
 (in-package :docker/images)
 
@@ -42,3 +43,12 @@
 
 (defun image-history (name)
   (request-json (format nil "/images/~a/history" name)))
+
+
+(defun remove-image (name &key force noprune)
+  (request-json (format nil "/images/~a~a"
+                        (url-encode name)
+                        (query-string
+                         "force" (and force 1)
+                         "noprune" (and noprune 1)))
+                :method :delete))
