@@ -32,7 +32,7 @@ contains a tag, the second value is NIL."
   (request-json (format nil "/images/json~a"
                         (query-string
                          "all" (and all 1)
-                         "filters" (url-encode filters)))))
+                         "filters" (and filters (url-encode filters))))))
 
 
 (defun create-image (from-image &key (output *standard-output*) (error *error-output*))
