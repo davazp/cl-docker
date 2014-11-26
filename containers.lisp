@@ -27,5 +27,10 @@
 (defun inspect-container-changes (id)
   (request-json (format nil "/containers/~a/changes" id)))
 
-(defun remove-container (id)
-  (request-json (format nil "/containers/~a" id) :method :delete))
+(defun remove-container (id &key force remove-volumes)
+  (request-json (format nil "/containers/~a~a"
+                        id
+                        (query-string
+                         "v" (and remove-volumes 1)
+                         "force" (and force 1)))
+                :method :delete))
