@@ -159,7 +159,8 @@ It returns a stream as primary value and a associative list of HTTP
 headers and values as strings."
   (let ((stream (open-docker-stream)))
     ;; Request resource
-    (format* stream "~a ~a HTTP/1.1" method url)
+    (format-line* stream "~a ~a HTTP/1.1" method url)
+    (format-line* stream "Connection: close")
 
     (when content-type
       (format-line* stream "Content-Type: ~a" content-type))
@@ -180,7 +181,6 @@ headers and values as strings."
                (setq content (chunga:make-chunked-stream content))
                (setf (chunga:chunked-stream-input-chunking-p content) t))))))
 
-    (write-crlf stream)
     (write-crlf stream)
     (finish-output stream)
 
