@@ -10,6 +10,22 @@
 
 (in-package :docker/images)
 
+
+(defun parse-repository-tag (string)
+  "Parse a image name and return two values. The first one is the
+repository and the second one is the tag. If the string does not
+contains a tag, the second value is NIL."
+  (declare (string string))
+  (let ((i (position #\: string :from-end t)))
+    (if (null i)
+        (values string nil)
+        (let ((part1 (subseq string 0 i))
+              (part2 (subseq string (1+ i))))
+          (if (find #\/ part2)
+              (values string nil)
+              (values part1 part2))))))
+
+
 (defun list-images (&key all filters)
   ;; filters example: {"dangling": ["true"]}
   (request-json (format nil "/images/json~a"
