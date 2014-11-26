@@ -5,7 +5,8 @@
   (:import-from :yason)
   (:export #:request
            #:request-json
-           #:query-string))
+           #:query-string
+           #:url-encode))
 
 (in-package :docker/request)
 
@@ -134,6 +135,21 @@ flexi-stream, which can be used to write and read from the daemon."
     (list (subseq line 0 sp1)
           (parse-integer (subseq line (1+ sp1) sp2))
           (subseq line (1+ sp2)))))
+
+
+(defun url-encode (string &key (external-format :utf-8))
+  "Returns a URL-encoded version of the string STRING."
+  (with-output-to-string (out)
+    (loop for octet across (flexi-streams:string-to-octets (or string "") :external-format external-format)
+          for char = (code-char octet)
+          do (cond ((or (char<= #\0 char #\9)
+                        (char<= #\a char #\z)
+                        (char<= #\A char #\Z)
+                        (find char "$-_.!*'()," :test #'char=))
+                     (write-char char out))
+                   ((char= char #\Space)
+                     (write-char #\+ out))
+                   (t (format out "%~2,'0x" (char-code char)))))))
 
 
 (defun request (url &key (method :get) content content-type)
