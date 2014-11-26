@@ -5,6 +5,7 @@
            #:list-images
            #:inspect-image
            #:image-history
+           #:tag-image
            #:remove-image))
 
 (in-package :docker/images)
@@ -43,6 +44,17 @@
 
 (defun image-history (name)
   (request-json (format nil "/images/~a/history" name)))
+
+
+(defun tag-image (name tag &key repo force)
+  (declare (string tag))
+  (request-json (format nil "/images/~a/tag~a"
+                        (url-encode name)
+                        (query-string
+                         "tag" (url-encode tag)
+                         "repo" (and repo (url-encode repo))
+                         "force" (and force 1)))
+                :method :post))
 
 
 (defun remove-image (name &key force noprune)
