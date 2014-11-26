@@ -80,3 +80,8 @@ contains a tag, the second value is NIL."
                          "force" (and force 1)
                          "noprune" (and noprune 1)))
                 :method :delete))
+
+
+(defun search-image (term)
+  (declare (string term))
+  (request-json (format nil "/images/search?term=~a" (url-encode term))))
