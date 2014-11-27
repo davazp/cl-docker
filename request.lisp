@@ -1,5 +1,5 @@
 (defpackage :docker/request
-  (:use :common-lisp)
+  (:use :common-lisp :docker/errors)
   (:import-from :chunga)
   (:import-from :flexi-streams)
   (:import-from :yason)
@@ -31,14 +31,6 @@
   (intern (uncamel-case string) "KEYWORD"))
 
 
-
-(define-condition docker-condition ()
-  nil)
-
-(define-condition docker-error (docker-condition error)
-  nil)
-
-
 ;;;; Basic HTTP Client on Unix Domain Sockets
 ;;;
 ;;; It would be nice to use a real HTTP client as
@@ -56,19 +48,22 @@
 (defun open-docker-stream (&optional (pathname *docker-socket-pathname*))
   "Connect to the docker daemon and return a bidirectional
 flexi-stream, which can be used to write and read from the daemon."
-
   ;; This function is implementation-dependant, because usocket does
   ;; not support Unix Domain Sockets. Is there any portability layer
   ;; for it?
   #-sbcl (error "Only SBCL is supported at the moment.")
-  (let ((socket (make-instance 'sb-bsd-sockets:local-socket :type :stream)))
-    (sb-bsd-sockets:socket-connect socket pathname)
-    (let ((raw-stream (sb-bsd-sockets:socket-make-stream
-                       socket
-                       :input
-                       t :output t
-                       :element-type '(unsigned-byte 8))))
-      (flex:make-flexi-stream raw-stream :external-format :utf-8))))
+  (unless (probe-file pathname)
+    (error 'docker-connection-error :pathname pathname))
+  
+  (handler-case
+      (let ((socket (make-instance 'sb-bsd-sockets:local-socket :type :stream)))
+	(sb-bsd-sockets:socket-connect socket pathname)
+	(let ((raw-stream (sb-bsd-sockets:socket-make-stream
+			   socket
+			   :input t
+			   :output t
+			   :element-type '(unsigned-byte 8))))
+	  (flex:make-flexi-stream raw-stream :external-format :utf-8)))))
 
 
 (define-condition docker-protocol-error (docker-error)
