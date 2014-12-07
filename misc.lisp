@@ -1,9 +1,11 @@
 (defpackage :docker/misc
   (:use :common-lisp :docker/request)
   (:import-from :uiop #:copy-stream-to-stream)
+  (:import-from #:yason)
   (:export #:info
            #:version
-	   #:ping))
+	   #:ping
+	   #:monitor-events))
 
 (in-package :docker/misc)
 
@@ -25,3 +27,11 @@
 	      (return))
 	     (t
 	      (write-line line out))))))))
+
+
+(defun monitor-events ()
+  (with-open-stream (stream (request "/events"))
+    ;; TODO: Invoke a callback instead (or in addition to) print it.
+    (loop
+       for event = (yason:parse stream :object-as :plist)
+       do (print event))))
