@@ -4,7 +4,8 @@
            #:inspect-container
            #:list-container-processes
            #:inspect-container-changes
-           #:remove-container))
+           #:remove-container
+           #:wait-container))
 
 (in-package :docker/containers)
 
@@ -34,3 +35,8 @@
                          "v" (and remove-volumes 1)
                          "force" (and force 1)))
                 :method :delete))
+
+
+
+(defun wait-container (id)
+  (request-json (format nil "/containers/~a/wait" id) :method :post)))
