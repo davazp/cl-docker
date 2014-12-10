@@ -27,8 +27,9 @@
 (defun inspect-container (id)
   (request-json (format nil "/containers/~a/json" id)))
 
-(defun list-container-processes (id)
-  (request-json (format nil "/containers/~a/top" id)))
+(defun list-container-processes (id &key ps-args)
+  (request-json (format nil "/containers/~a/top~a"
+                        id (query-string "ps_args" ps-args))))
 
 (defun inspect-container-changes (id)
   (request-json (format nil "/containers/~a/changes" id)))
