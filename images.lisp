@@ -10,7 +10,9 @@
            #:remove-image
            #:search-image
            #:export-repository-to-stream
-           #:export-repository-to-pathname))
+           #:export-repository-to-pathname
+           #:export-all-images-to-stream
+           #:export-all-images-to-pathname))
 
 (in-package :docker/images)
 
@@ -108,3 +110,17 @@ arguments are passed to the function OPEN."
                                 args))
     (export-repository-to-stream name out)))
 
+
+
+(defun export-all-images-to-stream (stream &key names)
+  (let ((url (format nil "/images/get~@[?~{names=~a~^&~}~]" names)))
+    (with-open-stream (tar (request url))
+      (copy-stream-to-stream tar stream :element-type '(unsigned-byte 8)))))
+
+(defun export-all-images-to-pathname (pathname &rest args &key names &allow-other-keys)
+  (let ((args (remf args :names)))
+    (with-open-stream (out (apply #'open pathname
+                                  :direction :output
+                                  :element-type '(unsigned-byte 8)
+                                  args))
+      (export-all-images-to-stream out :names names))))
