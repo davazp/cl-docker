@@ -8,7 +8,9 @@
            #:remove-container
            #:wait-container
            #:export-container-to-stream
-           #:export-container-to-pathname))
+           #:export-container-to-pathname
+           #:stop-container
+           #:restart-container))
 
 (in-package :docker/containers)
 
@@ -57,3 +59,18 @@ arguments are passed to the function OPEN."
                                 :element-type '(unsigned-byte 8)
                                 args))
     (export-container-to-stream id out)))
+
+
+
+(defun stop-container (id &key timeout)
+  (let ((url (format nil "/containers/~a/stop~a"
+                     id (query-string "t" timeout))))
+    (request-json url :method :post)))
+
+
+(defun restart-container (id &key timeout)
+  (let ((url (format nil "/containers/~a/restart~a"
+                     id (query-string "t" timeout))))
+    (request-json url :method :post)))
+
+
