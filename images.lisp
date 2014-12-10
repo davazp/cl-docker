@@ -1,13 +1,16 @@
 (defpackage :docker/images
   (:use :common-lisp :docker/request)
   (:import-from :yason)
+  (:import-from :uiop #:copy-stream-to-stream)
   (:export #:create-image
            #:list-images
            #:inspect-image
            #:image-history
            #:tag-image
            #:remove-image
-           #:search-image))
+           #:search-image
+           #:export-repository-to-stream
+           #:export-repository-to-pathname))
 
 (in-package :docker/images)
 
@@ -88,3 +91,20 @@ contains a tag, the second value is NIL."
 (defun search-image (term)
   (declare (string term))
   (request-json (format nil "/images/search?term=~a" (url-encode term))))
+
+
+
+(defun export-repository-to-stream (name stream)
+  "Export the repository NAME as a tar archive to STREAM."
+  (with-open-stream (tar (request (format nil "/images/~a/get" name)))
+    (copy-stream-to-stream tar stream :element-type '(unsigned-byte 8))))
+
+(defun export-repository-to-pathname (name pathname &rest args &key &allow-other-keys)
+  "Export the repository NAME as a tar archive to PATHNAME. Keyword
+arguments are passed to the function OPEN."
+  (with-open-stream (out (apply #'open pathname
+                                :direction :output
+                                :element-type '(unsigned-byte 8)
+                                args))
+    (export-repository-to-stream name out)))
+
