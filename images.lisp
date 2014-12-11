@@ -1,13 +1,18 @@
 (defpackage :docker/images
   (:use :common-lisp :docker/request)
   (:import-from :yason)
+  (:import-from :uiop #:copy-stream-to-stream)
   (:export #:create-image
            #:list-images
            #:inspect-image
            #:image-history
            #:tag-image
            #:remove-image
-           #:search-image))
+           #:search-image
+           #:export-repository-to-stream
+           #:export-repository-to-pathname
+           #:export-all-images-to-stream
+           #:export-all-images-to-pathname))
 
 (in-package :docker/images)
 
@@ -29,18 +34,19 @@ contains a tag, the second value is NIL."
 
 (defun list-images (&key all filters)
   ;; filters example: {"dangling": ["true"]}
-  (request-json (format nil "/images/json~a"
-                        (query-string
-                         "all" (and all 1)
-                         "filters" (and filters (url-encode filters))))))
+  (let ((parameters `(("all" . ,(and all 1))
+                      ("filters" . ,(and filters (url-encode filters))))))
+    (request-json "/images/json" :parameters parameters)))
 
 
 (defun create-image (from-image &key (output *standard-output*) (error *error-output*))
   "Create an image from FROM-IMAGE."
   (multiple-value-bind (stream headers)
-      (request (format nil "/images/create~a"
-                       (query-string "fromImage" from-image))
-               :method :post)
+
+      (request "/images/create"
+               :method :post
+               :parameters `(("fromImage" . ,from-image)))
+    
     (declare (ignorable headers))
     (handler-case
         (loop
@@ -66,25 +72,52 @@ contains a tag, the second value is NIL."
 (defun tag-image (name tag &key repo force)
   (declare (string tag))
   (multiple-value-bind (stream)
-      (request (format nil "/images/~a/tag~a"
-                       (url-encode name)
-                       (query-string
-                        "tag" (url-encode tag)
-                        "repo" (and repo (url-encode repo))
-                        "force" (and force 1)))
-               :method :post)
+      (request (format nil "/images/~a/tag" (url-encode name))
+               :method :post
+               :parameters `(("tag" . ,tag)
+                             ("repo" . ,repo)
+                             ("force" . ,(and force 1))))
     (close stream)))
 
 
 (defun remove-image (name &key force noprune)
-  (request-json (format nil "/images/~a~a"
-                        (url-encode name)
-                        (query-string
-                         "force" (and force 1)
-                         "noprune" (and noprune 1)))
-                :method :delete))
+  (request-json (format nil "/images/~a" (url-encode name))
+                :method :delete
+                :parameters `(("force" . ,(and force 1))
+                              ("noproune" . ,(and noprune 1)))))
 
 
 (defun search-image (term)
   (declare (string term))
-  (request-json (format nil "/images/search?term=~a" (url-encode term))))
+  (request-json "/images/search" :parameters `(("term" . ,term))))
+
+
+
+(defun export-repository-to-stream (name stream)
+  "Export the repository NAME as a tar archive to STREAM."
+  (with-open-stream (tar (request (format nil "/images/~a/get" name)))
+    (copy-stream-to-stream tar stream :element-type '(unsigned-byte 8))))
+
+(defun export-repository-to-pathname (name pathname &rest args &key &allow-other-keys)
+  "Export the repository NAME as a tar archive to PATHNAME. Keyword
+arguments are passed to the function OPEN."
+  (with-open-stream (out (apply #'open pathname
+                                :direction :output
+                                :element-type '(unsigned-byte 8)
+                                args))
+    (export-repository-to-stream name out)))
+
+
+
+(defun export-all-images-to-stream (stream &key names)
+  (let ((url (format nil "/images/get~@[?~{names=~a~^&~}~]" names)))
+    (with-open-stream (tar (request url))
+      (copy-stream-to-stream tar stream :element-type '(unsigned-byte 8)))))
+
+(defun export-all-images-to-pathname (pathname &rest args &key names &allow-other-keys)
+  (let ((args (remf args :names)))
+    (with-open-stream (out (apply #'open pathname
+                                  :direction :output
+                                  :element-type '(unsigned-byte 8)
+                                  args))
+      (export-all-images-to-stream out :names names))))

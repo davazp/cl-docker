@@ -1,8 +1,8 @@
 (defpackage :docker/errors
   (:use :common-lisp)
   (:export #:docker-condition
-	   #:docker-error
-	   #:docker-connection-error))
+           #:docker-error
+           #:docker-connection-error))
 
 (in-package :docker/errors)
 
@@ -18,4 +18,4 @@
   (:report
    (lambda (condition stream)
      (format stream "Could not connect to Docker daemon: unknown file ~S."
-	     (slot-value condition 'pathname)))))
+             (slot-value condition 'pathname)))))

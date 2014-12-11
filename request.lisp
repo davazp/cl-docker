@@ -5,7 +5,6 @@
   (:import-from :yason)
   (:export #:request
            #:request-json
-           #:query-string
            #:url-encode))
 
 (in-package :docker/request)
@@ -147,14 +146,30 @@ flexi-stream, which can be used to write and read from the daemon."
                    (t (format out "%~2,'0x" (char-code char)))))))
 
 
-(defun request (url &key (method :get) content content-type)
+
+(defun query-string-from-alist (alist)
+  (with-output-to-string (out)
+    (flet ((write-entry (key value &optional first)
+             (let ((value-string
+                    (etypecase value
+                      (string value)
+                      (integer (format nil "~d" value)))))
+               (format out "~:[&~;?~]~a=~a" first key (url-encode value-string)))))
+      (let ((alist (remove nil alist :key #'cdr)))
+        (when alist
+          (write-entry (caar alist) (cdar alist) t))
+        (dolist (entry (cdr alist))
+          (write-entry (car entry) (cdr entry)))))))
+
+
+(defun request (url &key (method :get) parameters content content-type)
   "Request a resource an Docker Remote API end-point.
 
 It returns a stream as primary value and a associative list of HTTP
 headers and values as strings."
   (let ((stream (open-docker-stream)))
     ;; Request resource
-    (format-line* stream "~a ~a HTTP/1.1" method url)
+    (format-line* stream "~a ~a~a HTTP/1.1" method url (query-string-from-alist parameters))
     (format-line* stream "Connection: close")
 
     (when content-type
@@ -223,19 +238,3 @@ headers and values as strings."
         (yason:parse stream
                      :object-key-fn #'string-to-keyword
                      :object-as :plist)))))
-
-
-(defun query-string (&rest plist)
-  (with-output-to-string (out)
-    (let ((plist (loop
-                    for (x y) on plist by #'cddr
-                    unless (null y)
-                    collect x
-                    and collect y)))
-      (when plist
-        (destructuring-bind (attr value &rest others) plist
-          (declare (ignore others))
-          (format out "?~a=~a" attr value)))
-      (loop
-         for (attr value) on (cddr plist) by #'cddr
-         do (format out "&~a=~a" attr value)))))
