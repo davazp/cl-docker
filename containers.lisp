@@ -15,33 +15,30 @@
 (in-package :docker/containers)
 
 (defun list-containers (&key limit since before size all)
-  (let ((url (format nil "/containers/json~a"
-                     (query-string "limit" limit
-                                   "since" since
-                                   "before" before
-                                   "size" (and size 1)
-                                   "all" (and all 1)))))
-    (request-json url)))
+  (request-json "/containers/json"
+                :parameters
+                `(("limit" . ,limit)
+                  ("since" . ,since)
+                  ("before" . ,before)
+                  ("size" . ,(and size 1))
+                  ("all" . ,(and all 1)))))
 
 
 (defun inspect-container (id)
   (request-json (format nil "/containers/~a/json" id)))
 
 (defun list-container-processes (id &key ps-args)
-  (request-json (format nil "/containers/~a/top~a"
-                        id (query-string "ps_args" ps-args))))
+  (request-json (format nil "/containers/~a/top" id)
+                :parameters `(("ps_args" . ,ps-args))))
 
 (defun inspect-container-changes (id)
   (request-json (format nil "/containers/~a/changes" id)))
 
 (defun remove-container (id &key force remove-volumes)
-  (request-json (format nil "/containers/~a~a"
-                        id
-                        (query-string
-                         "v" (and remove-volumes 1)
-                         "force" (and force 1)))
-                :method :delete))
-
+  (request-json (format nil "/containers/~a" id)
+                :method :delete
+                :parameters `(("v" . ,(and remove-volumes 1))
+                              ("force" . ,(and force 1)))))
 
 
 (defun wait-container (id)
@@ -64,14 +61,14 @@ arguments are passed to the function OPEN."
 
 
 (defun stop-container (id &key timeout)
-  (let ((url (format nil "/containers/~a/stop~a"
-                     id (query-string "t" timeout))))
-    (request-json url :method :post)))
+  (request-json (format nil "/containers/~a/stop" id)
+                :method :post
+                :parameters `(("t" . ,timeout))))
 
 
 (defun restart-container (id &key timeout)
-  (let ((url (format nil "/containers/~a/restart~a"
-                     id (query-string "t" timeout))))
-    (request-json url :method :post)))
+  (request-json (format nil "/containers/~a/restart" id)
+                :method :post
+                :parameters `(("t" . ,timeout))))
 
 

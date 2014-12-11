@@ -34,18 +34,19 @@ contains a tag, the second value is NIL."
 
 (defun list-images (&key all filters)
   ;; filters example: {"dangling": ["true"]}
-  (request-json (format nil "/images/json~a"
-                        (query-string
-                         "all" (and all 1)
-                         "filters" (and filters (url-encode filters))))))
+  (let ((parameters `(("all" . ,(and all 1))
+                      ("filters" . ,(and filters (url-encode filters))))))
+    (request-json "/images/json" :parameters parameters)))
 
 
 (defun create-image (from-image &key (output *standard-output*) (error *error-output*))
   "Create an image from FROM-IMAGE."
   (multiple-value-bind (stream headers)
-      (request (format nil "/images/create~a"
-                       (query-string "fromImage" from-image))
-               :method :post)
+
+      (request "/images/create"
+               :method :post
+               :parameters `(("fromImage" . ,from-image)))
+    
     (declare (ignorable headers))
     (handler-case
         (loop
@@ -71,28 +72,24 @@ contains a tag, the second value is NIL."
 (defun tag-image (name tag &key repo force)
   (declare (string tag))
   (multiple-value-bind (stream)
-      (request (format nil "/images/~a/tag~a"
-                       (url-encode name)
-                       (query-string
-                        "tag" (url-encode tag)
-                        "repo" (and repo (url-encode repo))
-                        "force" (and force 1)))
-               :method :post)
+      (request (format nil "/images/~a/tag" (url-encode name))
+               :method :post
+               :parameters `(("tag" . ,tag)
+                             ("repo" . ,repo)
+                             ("force" . ,(and force 1))))
     (close stream)))
 
 
 (defun remove-image (name &key force noprune)
-  (request-json (format nil "/images/~a~a"
-                        (url-encode name)
-                        (query-string
-                         "force" (and force 1)
-                         "noprune" (and noprune 1)))
-                :method :delete))
+  (request-json (format nil "/images/~a" (url-encode name))
+                :method :delete
+                :parameters `(("force" . ,(and force 1))
+                              ("noproune" . ,(and noprune 1)))))
 
 
 (defun search-image (term)
   (declare (string term))
-  (request-json (format nil "/images/search?term=~a" (url-encode term))))
+  (request-json "/images/search" :parameters `(("term" . ,term))))
 
 
 
