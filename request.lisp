@@ -4,7 +4,8 @@
   (:import-from :flexi-streams)
   (:import-from :yason)
   (:export #:request
-           #:request-json))
+           #:request-json
+           #:url-encode))
 
 (in-package :docker/request)
 
