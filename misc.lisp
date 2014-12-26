@@ -4,8 +4,8 @@
   (:import-from #:yason)
   (:export #:info
            #:version
-	   #:ping
-	   #:monitor-events))
+           #:ping
+           #:monitor-events))
 
 (in-package :docker/misc)
 
@@ -19,14 +19,14 @@
   (with-output-to-string (out)
     (with-open-stream (stream (request "/_ping"))
       (loop
-	 (multiple-value-bind (line lastp)
-	     (read-line stream nil)
-	   (cond
-	     (lastp
-	      (write-string line out)
-	      (return))
-	     (t
-	      (write-line line out))))))))
+         (multiple-value-bind (line lastp)
+             (read-line stream nil)
+           (cond
+             (lastp
+              (write-string line out)
+              (return))
+             (t
+              (write-line line out))))))))
 
 
 (defun monitor-events ()
