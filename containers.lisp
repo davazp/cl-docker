@@ -10,7 +10,8 @@
            #:export-container-to-stream
            #:export-container-to-pathname
            #:stop-container
-           #:restart-container))
+           #:restart-container
+           #:kill-container))
 
 (in-package :docker/containers)
 
@@ -71,4 +72,9 @@ arguments are passed to the function OPEN."
                 :method :post
                 :parameters `(("t" . ,timeout))))
 
+
+(defun kill-container (id &key signal)
+  (request-json (format nil "/containers/~a/kill" id)
+                :method :post
+                :parameters `(("signal" . ,signal))))
 
