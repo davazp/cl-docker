@@ -78,3 +78,12 @@ arguments are passed to the function OPEN."
                 :method :post
                 :parameters `(("signal" . ,signal))))
 
+
+
+(defun pause-container (id)
+  (request-json (format nil "/containers/~a/pause" id)
+                :method :post))
+
+(defun unpause-container (id)
+  (request-json (format nil "/containers/~a/unpause" id)
+                :method :post))
