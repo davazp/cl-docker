@@ -11,7 +11,9 @@
            #:export-container-to-pathname
            #:stop-container
            #:restart-container
-           #:kill-container))
+           #:kill-container
+           #:pause-container
+           #:unpause-container))
 
 (in-package :docker/containers)
 
